@@ -1,251 +1,267 @@
 #lang racket
 
-; Definir el carácter de espacio vacío, que se usará para representar las celdas vacías del tablero
+(provide crear-tablero
+         obtener-valor
+         establecer-valor
+         esta-vacio?
+         tablero-lleno?
+         verificar-victoria
+         encontrar-mejor-movimiento
+         jugar-partida
+         mostrar-tablero
+         obtener-movimiento-jugador
+         TTT)
+
+; Definir el carácter de espacio vacío
 (define VACIO " ")
 
-; Función para crear un tablero vacío de tamaño m x n, usando listas anidadas
-; m: número de filas, n: número de columnas
+; Función para crear un tablero vacío de tamaño m x n
+; Cada fila contiene 'n' posiciones, y se crean 'm' filas
 (define (crear-tablero m n)
   (if (= m 0)
-      '()  ; Caso base: si no quedan filas por crear, devolver una lista vacía
-      (cons (crear-fila n) (crear-tablero (- m 1) n))))  ; Crear una fila y seguir con la siguiente
+      '()  ; Caso base: si m es 0, no hay filas
+      (cons (crear-fila n) (crear-tablero (- m 1) n))))  ; Llama recursivamente para construir el tablero
 
 ; Función para crear una fila de tamaño n llena de valores "VACIO"
 (define (crear-fila n)
   (if (= n 0)
-      '()  ; Caso base: si no quedan más columnas, devolver lista vacía
-      (cons VACIO (crear-fila (- n 1)))))  ; Añadir un espacio vacío a la fila y continuar
+      '()  ; Caso base: si n es 0, no hay más posiciones
+      (cons VACIO (crear-fila (- n 1)))))  ; Agrega VACIO a cada posición de la fila
 
-; Función para obtener el valor de una posición específica en el tablero
-; fila y columna son índices de las posiciones en el tablero
+; Función para obtener el valor en una posición específica del tablero
+; Accede a la fila y luego a la columna en esa fila
 (define (obtener-valor tablero fila columna)
-  (list-ref (list-ref tablero fila) columna))  ; Obtener la fila y luego la columna en esa fila
+  (list-ref (list-ref tablero fila) columna))
 
 ; Función para establecer un valor en una posición específica del tablero
-; tablero: la lista de listas que representa el tablero
-; fila, columna: la posición donde queremos colocar un valor
-; valor: el valor que queremos colocar
+; Actualiza la fila correcta y luego la columna dentro de esa fila
 (define (establecer-valor tablero fila columna valor)
   (define (actualizar-fila f)
     (if (= f fila)
-        (actualizar-columna (list-ref tablero f) columna valor 0)  ; Actualizar la fila que corresponde
-        (list-ref tablero f)))  ; Devolver la fila sin cambios si no es la que estamos actualizando
-  ; Función auxiliar que actualiza una columna específica de una fila
+        (actualizar-columna (list-ref tablero f) columna valor 0)  ; Actualiza la fila en la posición 'fila'
+        (list-ref tablero f)))  ; Mantiene las otras filas iguales
   (define (actualizar-columna fila-actual col val idx)
     (if (null? fila-actual)
-        '()  ; Caso base: si la fila está vacía, devolver una lista vacía
-        (if (and (number? col) (number? idx) (= idx col))  ; Verificación de índices
-            (cons val (cdr fila-actual))  ; Reemplazar el valor en la columna deseada
-            (cons (car fila-actual) (actualizar-columna (cdr fila-actual) col val (+ idx 1))))))  ; Seguir recorriendo la fila
-  (actualizar-tablero tablero actualizar-fila 0))  ; Actualizar el tablero aplicando la nueva fila
+        '()
+        (if (and (number? col) (number? idx) (= idx col))  ; Verifica que se actualiza en la columna correcta
+            (cons val (cdr fila-actual))  ; Actualiza la columna
+            (cons (car fila-actual) (actualizar-columna (cdr fila-actual) col val (+ idx 1))))))  ; Continua con las otras columnas
+  (actualizar-tablero tablero actualizar-fila 0))  ; Aplica la actualización al tablero
 
-; Función que actualiza el tablero, aplicando una función de actualización fila por fila
+; Función que actualiza el tablero aplicando una función fila por fila
 (define (actualizar-tablero tablero func idx)
   (if (null? tablero)
-      '()  ; Caso base: si el tablero está vacío, devolver una lista vacía
-      (cons (func idx) (actualizar-tablero (cdr tablero) func (+ idx 1)))))  ; Aplicar la función a la primera fila y seguir con el resto
+      '()
+      (cons (func idx) (actualizar-tablero (cdr tablero) func (+ idx 1)))))
 
-; Función que verifica si una posición del tablero está vacía
+; Verifica si una posición en el tablero está vacía (igual a "VACIO")
 (define (esta-vacio? tablero fila columna)
-  (equal? (obtener-valor tablero fila columna) VACIO))  ; Devuelve #t si el valor es "VACIO"
+  (equal? (obtener-valor tablero fila columna) VACIO))
 
-; Función que verifica si el tablero está lleno (sin posiciones VACÍAS)
+; Verifica si todo el tablero está lleno (sin espacios vacíos)
 (define (tablero-lleno? tablero)
-  ; Función auxiliar que verifica si una fila está llena (sin valores VACIOS)
   (define (fila-llena? fila)
     (if (null? fila)
-        #t  ; Caso base: una fila vacía está "llena" porque no tiene vacíos
-        (and (not (equal? (car fila) VACIO)) (fila-llena? (cdr fila)))))  ; Verifica cada valor en la fila
-  ; Función auxiliar que verifica si todas las filas están llenas
+        #t
+        (and (not (equal? (car fila) VACIO)) (fila-llena? (cdr fila)))))  ; Revisa cada celda de la fila
   (define (tablero-lleno-aux filas)
     (if (null? filas)
-        #t  ; Caso base: si no hay filas restantes, el tablero está lleno
-        (and (fila-llena? (car filas)) (tablero-lleno-aux (cdr filas)))))  ; Verifica fila por fila
-  (tablero-lleno-aux tablero))  ; Inicia la verificación para todo el tablero
+        #t
+        (and (fila-llena? (car filas)) (tablero-lleno-aux (cdr filas)))))  ; Revisa cada fila
+  (tablero-lleno-aux tablero))
 
-; Función que verifica si hay una victoria en una fila dada
-; fila: índice de la fila a verificar
-; jugador: "X" o "O" (el jugador actual)
+; Verifica si hay una victoria en una fila para el jugador dado
 (define (verificar-fila tablero fila jugador)
-  ; Función auxiliar que recorre las celdas de la fila, buscando tres en línea del mismo jugador
   (define (verificar-celdas columna cuenta)
     (cond
-      ((= cuenta 3) #t)  ; Si el contador llega a 3, hay victoria
-      ((>= columna (length (car tablero))) #f)  ; Si se llega al final de la fila, no hay victoria
-      ((equal? (obtener-valor tablero fila columna) jugador)
-       (verificar-celdas (+ columna 1) (+ cuenta 1)))  ; Si se encuentra una celda del jugador, se incrementa el contador
-      (else (verificar-celdas (+ columna 1) 0))))  ; Si no coincide, se reinicia el contador
+      ((= cuenta 3) #t)  ; Si hay 3 en línea, el jugador gana
+      ((>= columna (length (car tablero))) #f)  ; Si se sale del tablero, no hay victoria
+      ((equal? (obtener-valor tablero fila columna) jugador)  ; Verifica si el jugador tiene esa posición
+       (verificar-celdas (+ columna 1) (+ cuenta 1)))  ; Continúa verificando la siguiente celda
+      (else (verificar-celdas (+ columna 1) 0))))  ; Reinicia el contador si no es del jugador
   (verificar-celdas 0 0))
 
-; Función que verifica si hay una victoria en una columna dada
+; Verifica si hay una victoria en una columna para el jugador dado
 (define (verificar-columna tablero columna jugador)
-  ; Función auxiliar que recorre las filas en la columna dada
   (define (verificar-celdas fila cuenta)
     (cond
-      ((= cuenta 3) #t)  ; Tres en línea, hay victoria
-      ((>= fila (length tablero)) #f)  ; Si llegamos al final de las filas, no hay victoria
-      ((equal? (obtener-valor tablero fila columna) jugador)
-       (verificar-celdas (+ fila 1) (+ cuenta 1)))  ; Si hay una coincidencia, se incrementa el contador
-      (else (verificar-celdas (+ fila 1) 0))))  ; Si no coincide, se reinicia el contador
+      ((= cuenta 3) #t)  ; Si hay 3 en línea, el jugador gana
+      ((>= fila (length tablero)) #f)  ; Si se sale del tablero, no hay victoria
+      ((equal? (obtener-valor tablero fila columna) jugador)  ; Verifica si el jugador tiene esa posición
+       (verificar-celdas (+ fila 1) (+ cuenta 1)))  ; Continúa verificando la siguiente fila
+      (else (verificar-celdas (+ fila 1) 0))))  ; Reinicia el contador si no es del jugador
   (verificar-celdas 0 0))
 
-; Función que verifica si hay una victoria en las diagonales
-; Se verifican dos diagonales: la principal (de arriba izquierda a abajo derecha)
-; y la secundaria (de arriba derecha a abajo izquierda)
+; Verifica si hay una victoria en las diagonales
 (define (verificar-diagonales tablero jugador)
-  ; Verificar la diagonal principal
-  (define (verificar-diagonal-principal fila columna cuenta)
-    (cond
-      ((= cuenta 3) #t)  ; Si hay tres en línea, hay victoria
-      ((or (>= fila (length tablero)) (>= columna (length (car tablero)))) #f)  ; Si salimos del tablero, no hay victoria
-      ((equal? (obtener-valor tablero fila columna) jugador)
-       (verificar-diagonal-principal (+ fila 1) (+ columna 1) (+ cuenta 1)))  ; Continuar verificando la diagonal
-      (else (verificar-diagonal-principal (+ fila 1) (+ columna 1) 0))))
+  (define filas (length tablero))
+  (define columnas (length (car tablero)))
   
-  ; Verificar la diagonal secundaria
-  (define (verificar-diagonal-secundaria fila columna cuenta)
-    (cond
-      ((= cuenta 3) #t)  ; Si hay tres en línea, hay victoria
-      ((or (>= fila (length tablero)) (< columna 0)) #f)  ; Si salimos del tablero, no hay victoria
-      ((equal? (obtener-valor tablero fila columna) jugador)
-       (verificar-diagonal-secundaria (+ fila 1) (- columna 1) (+ cuenta 1)))  ; Continuar verificando la diagonal secundaria
-      (else (verificar-diagonal-secundaria (+ fila 1) (- columna 1) 0))))
+  ; Verifica la diagonal de izquierda a derecha (diagonal principal)
+  (define (verificar-diagonales-izq-der)
+    (define (verificar-desde fila-inicio col-inicio)
+      (define (verificar fila col cuenta)
+        (cond
+          ((= cuenta 3) #t)  ; Si hay 3 en línea, el jugador gana
+          ((or (>= fila filas) (>= col columnas)) #f)  ; Si se sale del tablero, no hay victoria
+          ((equal? (obtener-valor tablero fila col) jugador)  ; Verifica si el jugador tiene esa posición
+           (verificar (+ fila 1) (+ col 1) (+ cuenta 1)))  ; Continúa en la diagonal
+          (else (verificar (+ fila 1) (+ col 1) 0))))
+      (verificar fila-inicio col-inicio 0))
+    
+    (define (iterar-inicio fila col)
+      (cond
+        ((>= fila (- filas 2)) #f)  ; Limita la iteración para evitar revisiones innecesarias
+        ((>= col (- columnas 2)) (iterar-inicio (+ fila 1) 0))
+        ((verificar-desde fila col) #t)
+        (else (iterar-inicio fila (+ col 1)))))
+    
+    (iterar-inicio 0 0))  ; Comienza desde la esquina superior izquierda
   
-  ; Hay victoria si cualquiera de las dos diagonales tiene tres en línea
-  (or (verificar-diagonal-principal 0 0 0)
-      (verificar-diagonal-secundaria 0 (- (length (car tablero)) 1) 0)))
+  ; Verifica la diagonal de derecha a izquierda (diagonal secundaria)
+  (define (verificar-diagonales-der-izq)
+    (define (verificar-desde fila-inicio col-inicio)
+      (define (verificar fila col cuenta)
+        (cond
+          ((= cuenta 3) #t)
+          ((or (>= fila filas) (< col 0)) #f)
+          ((equal? (obtener-valor tablero fila col) jugador)
+           (verificar (+ fila 1) (- col 1) (+ cuenta 1)))
+          (else (verificar (+ fila 1) (- col 1) 0))))
+      (verificar fila-inicio col-inicio 0))
+    
+    (define (iterar-inicio fila col)
+      (cond
+        ((>= fila (- filas 2)) #f)
+        ((< col 2) (iterar-inicio (+ fila 1) (- columnas 1)))
+        ((verificar-desde fila col) #t)
+        (else (iterar-inicio fila (- col 1)))))
+    
+    (iterar-inicio 0 (- columnas 1)))  ; Comienza desde la esquina superior derecha
+  
+  (or (verificar-diagonales-izq-der) (verificar-diagonales-der-izq)))
 
-; Función que verifica si un jugador ha ganado
-; jugador: "X" o "O"
+; Verifica si un jugador ha ganado en filas, columnas o diagonales
 (define (verificar-victoria tablero jugador)
-  ; Verificar todas las filas
   (define (verificar-filas idx)
     (if (>= idx (length tablero))
-        #f  ; Si se han verificado todas las filas sin victoria, devolver #f
+        #f
         (or (verificar-fila tablero idx jugador)
-            (verificar-filas (+ idx 1)))))  ; Verificar la siguiente fila
+            (verificar-filas (+ idx 1)))))
   
-  ; Verificar todas las columnas
   (define (verificar-columnas idx)
     (if (>= idx (length (car tablero)))
-        #f  ; Si se han verificado todas las columnas sin victoria, devolver #f
+        #f
         (or (verificar-columna tablero idx jugador)
-            (verificar-columnas (+ idx 1)))))  ; Verificar la siguiente columna
+            (verificar-columnas (+ idx 1)))))
   
-  ; Verificar filas, columnas y diagonales
   (or (verificar-filas 0)
       (verificar-columnas 0)
       (verificar-diagonales tablero jugador)))
 
-; Evaluar una posición, asignando puntajes según las posibilidades de victoria
-; El jugador que tiene una victoria obtiene +10, el oponente obtiene +5
+; Evalúa una posición según las posibles victorias, otorgando puntajes
 (define (evaluar-posicion tablero fila columna jugador)
-  (define oponente (if (equal? jugador "X") "O" "X"))  ; Definir el oponente
-  (+ (if (verificar-victoria (establecer-valor tablero fila columna jugador) jugador) 10 0)  ; Puntaje para el jugador
-     (if (verificar-victoria (establecer-valor tablero fila columna oponente) oponente) 5 0)))  ; Puntaje para el oponente
+  (define oponente (if (equal? jugador "X") "O" "X"))  ; Define el jugador oponente
+  (+ (if (verificar-victoria (establecer-valor tablero fila columna jugador) jugador) 10 0)
+     (if (verificar-victoria (establecer-valor tablero fila columna oponente) oponente) 5 0)))
 
-; Función que encuentra el mejor movimiento para la IA evaluando todas las posiciones vacías
+; Encuentra el mejor movimiento para la IA revisando todas las posiciones
 (define (encontrar-mejor-movimiento tablero)
-  ; Función auxiliar que encuentra la posición con la mayor evaluación
   (define (encontrar-max-eval fila columna max-eval mejor-movimiento)
     (cond
-      ((>= fila (length tablero)) mejor-movimiento)  ; Si se revisaron todas las filas, devolver el mejor movimiento
-      ((>= columna (length (car tablero))) (encontrar-max-eval (+ fila 1) 0 max-eval mejor-movimiento))  ; Si se revisaron todas las columnas, pasar a la siguiente fila
-      ((not (esta-vacio? tablero fila columna)) (encontrar-max-eval fila (+ columna 1) max-eval mejor-movimiento))  ; Si la celda no está vacía, continuar con la siguiente
+      ((>= fila (length tablero)) mejor-movimiento)  ; Si se revisan todas las filas, devuelve el mejor movimiento
+      ((>= columna (length (car tablero))) (encontrar-max-eval (+ fila 1) 0 max-eval mejor-movimiento))
+      ((not (esta-vacio? tablero fila columna)) (encontrar-max-eval fila (+ columna 1) max-eval mejor-movimiento))
       (else
-       (define eval (evaluar-posicion tablero fila columna "O"))  ; Evaluar la posición actual
+       (define eval (evaluar-posicion tablero fila columna "O"))
        (if (> eval max-eval)
-           (encontrar-max-eval fila (+ columna 1) eval (cons fila columna))  ; Si es mejor, actualizar mejor movimiento
-           (encontrar-max-eval fila (+ columna 1) max-eval mejor-movimiento)))))  ; Continuar buscando
-  (encontrar-max-eval 0 0 -1 #f))  ; Iniciar la búsqueda desde la fila y columna 0
+           (encontrar-max-eval fila (+ columna 1) eval (cons fila columna))  ; Si encuentra una mejor evaluación, actualiza
+           (encontrar-max-eval fila (+ columna 1) max-eval mejor-movimiento)))))
+  (encontrar-max-eval 0 0 -1 #f))
 
-; Bucle principal del juego, alternando turnos entre el jugador y la IA
-(define (jugar-partida m n)
-  (define tablero (crear-tablero m n))  ; Crear el tablero inicial
-  
-  ; Bucle del juego que maneja turnos y verifica el estado del tablero
-  (define (bucle-juego tablero-actual jugador-actual)
-    (mostrar-tablero tablero-actual)  ; Mostrar el estado actual del tablero
-    (cond
-      ((verificar-victoria tablero-actual (if (equal? jugador-actual "X") "O" "X"))
-       (printf "¡~a gana!\n" (if (equal? jugador-actual "X") "O" "X")))  ; Si hay victoria, anunciar el ganador
-      ((tablero-lleno? tablero-actual) (printf "¡Es un empate!\n"))  ; Si el tablero está lleno, anunciar empate
-      (else
-       (if (equal? jugador-actual "X")
-           (comenzar-turno-jugador tablero-actual)  ; Turno del jugador
-           (comenzar-turno-ia tablero-actual)))))  ; Turno de la IA
-  
-  ; Manejar el turno del jugador
-  (define (comenzar-turno-jugador tablero-actual)
-    (define movimiento (obtener-movimiento-jugador tablero-actual))  ; Obtener movimiento del jugador
-    (bucle-juego (establecer-valor tablero-actual (car movimiento) (cadr movimiento) "X") "O"))  ; Actualizar tablero y cambiar turno
-  
-  ; Manejar el turno de la IA
-  (define (comenzar-turno-ia tablero-actual)
-    (define movimiento-ia (encontrar-mejor-movimiento tablero-actual))  ; Encontrar el mejor movimiento para la IA
-    (printf "La IA mueve a: ~a,~a\n" (+ (car movimiento-ia) 1) (+ (cdr movimiento-ia) 1))  ; Mostrar la jugada de la IA
-    (bucle-juego (establecer-valor tablero-actual (car movimiento-ia) (cdr movimiento-ia) "O") "X"))  ; Actualizar tablero y cambiar turno
-  
-  (bucle-juego tablero "X"))  ; Iniciar el bucle con el jugador "X"
-
-; Función para mostrar el tablero en la consola
+; Muestra el tablero en la consola
 (define (mostrar-tablero tablero)
-  ; Mostrar cada fila del tablero
   (define (mostrar-fila fila)
     (if (null? fila)
-        (newline)  ; Si la fila está vacía, pasar a la siguiente línea
+        (newline)
         (begin
-          (display (if (equal? (car fila) VACIO) "." (car fila)))  ; Mostrar "." en lugar de celdas vacías
-          (display " ")  ; Añadir espacio entre celdas
-          (mostrar-fila (cdr fila)))))  ; Mostrar el siguiente valor de la fila
-  ; Mostrar todas las filas del tablero
+          (display (if (equal? (car fila) VACIO) "." (car fila)))  ; Muestra '.' en lugar de espacios vacíos
+          (display " ")
+          (mostrar-fila (cdr fila)))))
   (define (mostrar-filas filas)
     (if (null? filas)
-        (void)  ; Si no hay más filas, no hacer nada
+        (void)
         (begin
-          (mostrar-fila (car filas))  ; Mostrar la fila actual
-          (mostrar-filas (cdr filas)))))  ; Mostrar el resto de las filas
-  (mostrar-filas tablero))  ; Iniciar la visualización del tablero
+          (mostrar-fila (car filas))
+          (mostrar-filas (cdr filas)))))
+  (mostrar-filas tablero))
 
-; Función auxiliar para obtener el movimiento del jugador
+; Obtiene el movimiento del jugador desde la entrada de la consola
 (define (obtener-movimiento-jugador tablero)
-  ; Solicitar al jugador ingresar su movimiento y validarlo
   (define (obtener-movimiento-valido)
     (printf "Ingresa tu movimiento (fila columna): ")
-    (define entrada (read-line))  ; Leer la entrada del usuario
-    (define movimiento (convertir-entrada-a-movimiento entrada))  ; Convertir la entrada en una lista de coordenadas
+    (define entrada (read-line))  ; Lee la entrada del jugador
+    (define movimiento (convertir-entrada-a-movimiento entrada))
     (if (and (lista-de-dos? movimiento)
-             (movimiento-valido? tablero movimiento))  ; Verificar si el movimiento es válido
+             (movimiento-valido? tablero movimiento))
         movimiento
         (begin
-          (printf "Movimiento inválido. Intenta de nuevo.\n")  ; Si no es válido, solicitar de nuevo
-          (obtener-movimiento-valido))))
+          (printf "Movimiento inválido. Intenta de nuevo.\n")
+          (obtener-movimiento-valido))))  ; Solicita nuevamente si el movimiento es inválido
   (obtener-movimiento-valido))
 
-; Función que convierte la entrada del jugador en una lista de coordenadas (sin usar map)
+; Convierte la entrada del jugador en una lista de coordenadas
 (define (convertir-entrada-a-movimiento entrada)
   (define (procesar-caracteres idx numeros)
     (if (>= idx (string-length entrada))
-        numeros  ; Caso base: devolver los números procesados
+        numeros
         (if (char-numeric? (string-ref entrada idx))
             (procesar-caracteres (+ idx 1) 
                                  (cons (- (string->number (substring entrada idx (+ idx 1))) 1)
-                                       numeros))  ; Convertir cada dígito en número y restar 1 para los índices
-            (procesar-caracteres (+ idx 1) numeros))))  ; Seguir procesando el resto de la cadena
-  (reverse (procesar-caracteres 0 '())))
+                                       numeros))
+            (procesar-caracteres (+ idx 1) numeros))))
+  (reverse (procesar-caracteres 0 '())))  ; Devuelve las coordenadas en orden correcto
 
-; Función para verificar si la lista tiene exactamente dos elementos (representando fila y columna)
+; Verifica si una lista tiene exactamente dos elementos
 (define (lista-de-dos? lst)
   (and (list? lst) (= (length lst) 2)))
 
-; Verificar si el movimiento es válido (dentro del rango del tablero y la posición está vacía)
+; Verifica si el movimiento es válido (dentro del tablero y en una posición vacía)
 (define (movimiento-valido? tablero movimiento)
   (and (>= (car movimiento) 0) (< (car movimiento) (length tablero))
        (>= (cadr movimiento) 0) (< (cadr movimiento) (length (car tablero)))
        (esta-vacio? tablero (car movimiento) (cadr movimiento))))
 
-; Iniciar el juego de Tic-Tac-Toe
+; Bucle principal del juego que alterna entre el jugador y la IA
+(define (jugar-partida m n)
+  (define tablero (crear-tablero m n))
+  
+  (define (bucle-juego tablero-actual jugador-actual)
+    (mostrar-tablero tablero-actual)
+    (cond
+      ((verificar-victoria tablero-actual (if (equal? jugador-actual "X") "O" "X"))
+       (printf "¡~a gana!\n" (if (equal? jugador-actual "X") "O" "X")))  ; Verifica si alguien ganó
+      ((tablero-lleno? tablero-actual) (printf "¡Es un empate!\n"))  ; Verifica si el tablero está lleno
+      (else
+       (if (equal? jugador-actual "X")
+           (comenzar-turno-jugador tablero-actual)  ; Turno del jugador humano
+           (comenzar-turno-ia tablero-actual)))))  ; Turno de la IA
+  
+  ; Lógica para el turno del jugador humano
+  (define (comenzar-turno-jugador tablero-actual)
+    (define movimiento (obtener-movimiento-jugador tablero-actual))
+    (bucle-juego (establecer-valor tablero-actual (car movimiento) (cadr movimiento) "X") "O"))
+  
+  ; Lógica para el turno de la IA
+  (define (comenzar-turno-ia tablero-actual)
+    (define movimiento-ia (encontrar-mejor-movimiento tablero-actual))
+    (printf "La IA mueve a: ~a,~a\n" (+ (car movimiento-ia) 1) (+ (cdr movimiento-ia) 1))  ; Muestra el movimiento de la IA
+    (bucle-juego (establecer-valor tablero-actual (car movimiento-ia) (cdr movimiento-ia) "O") "X"))
+  
+  (bucle-juego tablero "X"))
+
+; Función principal para iniciar el juego de Tic-Tac-Toe
 (define (TTT m n)
-  (if (and (>= m 3) (<= m 10) (>= n 3) (<= n 10))  ; Verificar que el tamaño del tablero esté en el rango permitido
-      (jugar-partida m n)  ; Iniciar el juego
-      (printf "Tamaño de tablero inválido. Por favor, usa dimensiones entre 3x3 y 10x10.\n")))  ; Mensaje de error para tamaños no válidos
+  (if (and (>= m 3) (<= m 10) (>= n 3) (<= n 10))
+      (jugar-partida m n)
+      (printf "Tamaño de tablero inválido. Por favor, usa dimensiones entre 3x3 y 10x10.\n")))
