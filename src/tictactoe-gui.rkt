@@ -1,6 +1,6 @@
 #lang racket/gui
 
-(require racket/class)
+  (require racket/class)
 
 ; Importar las funciones necesarias del archivo de lógica del juego
 (require "tictactoe-logic.rkt")
