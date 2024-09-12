@@ -1,0 +1,72 @@
+|Instalación de Racket|
+
+	1. Visitar la página oficial de Racket " https://racket-lang.org/".
+
+	2. Descargar el instalador adecuado al sistema operativo.
+
+	3. Ejecutar el instalador y seguir las instrucciones del mismo.
+
+	4. Una vez instalado, abrir el IDE de Racket (DrRacket).
+
+
+El proyecto esta compuesto por dos archivos principales:
+
+	-tictactoe-logic.rkt: contiene la lógica del juego.
+	-tictactoe-gui.rkt: contiene la interfaz  gráfica del juego.
+
+Ambos archivos deben estar descargados y almacenados en la misma carpeta en la computadora.
+
+
+
+ |Inicialización del juego| 
+
+
+El juego se debe correr desde el archivo que contiene la interfaz gráfica:
+
+	1. Abrir el archivo "tictactoe-gui.rkt" en DrRacket.
+
+	2. Hacer clic en "Run" para ejecutar el programa.
+
+	3. Para iniciar el juego debe ejecutar la función TTT.
+
+ 
+-La función TTT recibe los parámetros 'm' y 'n' donde m son las filas y n las columnas del tablero que se desee usar para jugar.
+
+-El juego permite configurar el tamaño del tablero entre 3x3 y 10x10. 
+
+
+
+
+ |Durante el juego|
+
+Una vez iniciado el juego, el jugador utiliza "X" y juega contra Inteligencia Artificial, que utiliza "O".
+
+-Para hacer un movimiento solo se debe seleccionar una casilla vacía haciendo clic con el mouse.
+
+-El objetivo del juego es que cada jugador debe tratar de alinear tres símbolos "X" o "O" horizontal, vertical o diagonalmente.
+
+-Cuando haya un ganador, el programa enviará un mensaje. 
+
+
+
+
+  |Fin del juego|
+
+-Una vez que el jugador o la IA ganen la partida el juego se termina.
+
+-Si se desea reiniciar la partida, se debe hacer clic en el botón "Reiniciar" y el tablero se limpiará y se creará un juego nuevo con las mismas dimensiones seleccionadas la primera vez.
+
+
+
+  |Manejo de errores| 
+
+- Si el tamaño del tablero es inválido, es decir menor a 3x3 o mayor a 10x10, el programa mostrará el siguiente mensaje:
+
+"Tamaño de tablero inválido. Por favor, usa dimensiones entre 3x3 y 10x10."
+
+
+
+
+
+
+
